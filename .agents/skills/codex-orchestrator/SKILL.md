@@ -1,5 +1,5 @@
 ---
-name: cost-efficient-orchestrator
+name: codex-orchestrator
 description: Coordinate coding and investigation work with the user's Astra, Sol, and Luna agent topology. Use for tasks with bounded implementation, code exploration, documentation research, or a requested independent review; handle simple work directly.
 ---
 

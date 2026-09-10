@@ -1,4 +1,4 @@
-# 按图片编排的 Codex 配置包
+# Codex Orchestrator
 
 [English](README.md) | **简体中文**
 
@@ -18,7 +18,7 @@
 
 - `.codex/config.toml`：主代理与通用子代理默认值、并发上限。
 - `.codex/agents/*.toml`：四个具名角色的模型、强度、职责和权限。
-- `.agents/skills/cost-efficient-orchestrator/SKILL.md`：调度与验收规则。
+- `.agents/skills/codex-orchestrator/SKILL.md`：调度与验收规则。
 - `AGENTS.md`：项目入口，指向上述技能。
 
 ## 日后安装到项目
@@ -27,7 +27,7 @@
 2. 将本包 `AGENTS.md` 的编排段落合并到项目原有 `AGENTS.md`，保留原有项目规则。
 3. 对于已有 `.codex/config.toml`，合并模型、思考强度及 `[agents]` 中的键，不要重复创建同名 TOML 表。保留原来的模型服务商、认证、MCP 和其他配置。
 4. 在已信任的目标项目中开启新的 Codex 任务。已有会话的模型和工具配置不保证热更新；项目或界面中的显式覆盖也可能改变实际模型。
-5. 可以明确调用：`$cost-efficient-orchestrator 帮我实现……，按需使用子代理。`
+5. 可以明确调用：`$codex-orchestrator 帮我实现……，按需使用子代理。`
 
 此包按项目布局提供，不附带自动安装脚本。角色显式固定模型和强度，调整通用子代理默认值不会改变具名角色。研究角色还需要环境提供可用的资料查询工具。模型名称按当前会话支持的标识配置，目标环境仍须提供这些模型。
 

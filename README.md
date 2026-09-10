@@ -1,4 +1,4 @@
-# Cost-Efficient Codex Orchestrator
+# Codex Orchestrator
 
 **English** | [简体中文](README.zh-CN.md)
 
@@ -18,7 +18,7 @@ Run at most three subagents concurrently, for a total of four agents including t
 
 - `.codex/config.toml`: Root settings, generic subagent defaults, and concurrency limit.
 - `.codex/agents/*.toml`: Models, reasoning effort, responsibilities, and permissions for the four named roles.
-- `.agents/skills/cost-efficient-orchestrator/SKILL.md`: Delegation and acceptance rules.
+- `.agents/skills/codex-orchestrator/SKILL.md`: Delegation and acceptance rules.
 - `AGENTS.md`: Project instructions pointing to the orchestration skill.
 
 ## Install into a project
@@ -27,7 +27,7 @@ Run at most three subagents concurrently, for a total of four agents including t
 2. Merge the orchestration paragraph from this repository's `AGENTS.md` into the project's existing `AGENTS.md`, preserving its project rules.
 3. If `.codex/config.toml` already exists, merge the model, reasoning effort, and `[agents]` keys without creating duplicate TOML tables. Preserve existing provider, authentication, MCP, and other settings.
 4. Start a new Codex task in the trusted target project. Existing sessions may not reload model and tool settings; explicit project or UI overrides may also change the actual model used.
-5. Invoke the skill explicitly if desired: `$cost-efficient-orchestrator Implement ..., using subagents where useful.`
+5. Invoke the skill explicitly if desired: `$codex-orchestrator Implement ..., using subagents where useful.`
 
 This repository provides a project-scoped layout without an automatic installer. Named roles pin their models and reasoning effort, so changing generic subagent defaults does not change those roles. The researcher also needs lookup tools in the target environment. Model identifiers match the environment used to prepare this configuration; your environment must provide those models.
 

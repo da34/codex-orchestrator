@@ -36,7 +36,7 @@ def main():
         require(actual == expected, f"Topology mismatch for {name}: {actual}")
         for key in ("description", "developer_instructions"):
             require(isinstance(role[key], str) and role[key].strip(), f"Missing {name}.{key}")
-    skill = ROOT / ".agents/skills/cost-efficient-orchestrator/SKILL.md"
+    skill = ROOT / ".agents/skills/codex-orchestrator/SKILL.md"
     require(skill.is_file(), "Missing orchestration skill")
     require((ROOT / "AGENTS.md").is_file(), "Missing project instruction entrypoint")
     print("PASS: TOML, role models, effort, permissions, concurrency, and instruction files")
