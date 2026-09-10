@@ -2,55 +2,121 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-A reusable configuration for on-demand multi-agent work in Codex. Cloning this repository does not install the configuration or change your global Codex settings.
+On-demand multi-agent configuration for Codex: **Astra orchestrates, Luna investigates, Sol implements.** Add an independent Astra review when the change needs one.
 
-| Stage / role | Model | Reasoning effort | Responsibility |
+This repository provides agent profiles, an orchestration skill, and project instructions for coding tasks that benefit from focused delegation. Simple tasks stay with the root agent. Independent work can run in parallel, and the root integrates and verifies the result.
+
+## How it works
+
+```text
+                    Astra · medium
+                   root / orchestrator
+                           |
+                    delegate on demand
+              +------------+------------+
+              |            |            |
+           explorer      worker      researcher
+          Luna · max    Sol · high    Luna · max
+           codebase    implementation  focused
+        investigation    + tests       lookup
+              |            |            |
+              +------------+------------+
+                           |
+                    Astra · medium
+                   integrate + verify
+                           |
+                     only if needed
+                           |
+                    Astra · xhigh
+                   independent review
+```
+
+| Role | Model | Reasoning effort | Responsibility |
 |---|---|---|---|
-| Root | GPT-6 Astra | medium | Decomposition, orchestration, integration, verification |
-| explorer | GPT-5.6 Luna | max | Bounded codebase investigation |
-| worker | GPT-5.6 Sol | high | Implementation and tests |
-| researcher | GPT-5.6 Luna | max | Focused documentation and source lookup |
-| reviewer (optional) | GPT-6 Astra | xhigh | Independent review after integration and verification |
+| Root | `gpt-6-astra` | `medium` | Scope, delegate, integrate, and verify |
+| explorer | `gpt-5.6-luna` | `max` | Investigate a bounded codebase question |
+| worker | `gpt-5.6-sol` | `high` | Implement changes and run relevant tests |
+| researcher | `gpt-5.6-luna` | `max` | Answer focused documentation or source questions |
+| reviewer | `gpt-6-astra` | `xhigh` | Independently inspect the integrated change when needed |
 
-Run at most three subagents concurrently, for a total of four agents including the root. Independent review reuses a slot after earlier work completes. The root handles simple tasks directly and delegates only useful independent work. Implementation that depends on investigation waits for those findings.
+The configuration allows three concurrent subagents. Review runs after integration and verification, reusing an available slot. Work that depends on investigation waits for the findings. Delegation is intended to control overhead; it does not guarantee lower token usage for every task.
 
-## Repository layout
+## Requirements
 
-- `.codex/config.toml`: Root settings, generic subagent defaults, and concurrency limit.
-- `.codex/agents/*.toml`: Models, reasoning effort, responsibilities, and permissions for the four named roles.
-- `.agents/skills/codex-orchestrator/SKILL.md`: Delegation and acceptance rules.
-- `AGENTS.md`: Project instructions pointing to the orchestration skill.
+- A Codex environment with subagents, custom agent profiles, and skills support.
+- Access to the configured models and reasoning levels, or compatible replacements you configure yourself.
+- Lookup tools available to Codex when using the researcher.
+- Python 3.11 or later only if you want to run the configuration validator.
 
-## Install into a project
+See the [OpenAI subagent documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents) for platform configuration details.
 
-1. Merge `.codex` and `.agents` into your target project's root directory. Back up and merge any existing files with matching names.
-2. Merge the orchestration paragraph from this repository's `AGENTS.md` into the project's existing `AGENTS.md`, preserving its project rules.
-3. If `.codex/config.toml` already exists, merge the model, reasoning effort, and `[agents]` keys without creating duplicate TOML tables. Preserve existing provider, authentication, MCP, and other settings.
-4. Start a new Codex task in the trusted target project. Existing sessions may not reload model and tool settings; explicit project or UI overrides may also change the actual model used.
-5. Invoke the skill explicitly if desired: `$codex-orchestrator Implement ..., using subagents where useful.`
+## Installation
 
-This repository provides a project-scoped layout without an automatic installer. Named roles pin their models and reasoning effort, so changing generic subagent defaults does not change those roles. The researcher also needs lookup tools in the target environment. Model identifiers match the environment used to prepare this configuration; your environment must provide those models.
+Clone the repository:
 
-The explorer, researcher, and reviewer are read-only. The worker uses workspace-write, subject to the parent session's permissions. The root configuration does not set or override approval, authentication, or provider settings.
+```sh
+git clone https://github.com/da34/codex-orchestrator.git
+```
 
-## Validation scope
+Merge these components into your target project:
 
-The initial configuration package passed TOML parsing, role mapping, skill frontmatter, and archive integrity checks. It has not been installed into the active Codex configuration used to prepare it or tested through end-to-end model requests. On-demand delegation aims to control overhead; actual token usage depends on the task and context.
+| Component | Purpose |
+|---|---|
+| `.codex/config.toml` | Root model, default subagent settings, and concurrency |
+| `.codex/agents/` | Four named agent profiles |
+| `.agents/skills/codex-orchestrator/` | Orchestration skill |
+| `AGENTS.md` | Project instruction to use the skill |
 
-## Ongoing development
+For an existing project, back up overlapping files and merge their contents. Preserve existing `AGENTS.md` rules and provider, authentication, MCP, and permission settings. Merge the keys into any existing `[agents]` table instead of adding a duplicate table.
 
-After changing the configuration, run the validator with Python 3.11 or later:
+Open a new Codex task in the trusted target project after installation. Cloning alone does not install the configuration. This repository uses project-scoped settings and provides no automatic installer.
+
+## Usage
+
+Invoke the skill with a concrete task:
+
+```text
+$codex-orchestrator
+Add CSV export to the invoices page. Follow the existing export conventions
+and verify column ordering, escaping, and empty results.
+```
+
+Or request an independent review as part of the task:
+
+```text
+$codex-orchestrator
+Refactor the permission checks without changing behavior.
+After integration and verification, use an independent reviewer
+to check for access-control regressions.
+```
+
+The skill chooses which roles are useful. Tests belong to the worker; there is no separate tester stage. The reviewer is optional unless requested or warranted by material residual risk.
+
+## Customization
+
+- Change the root model and effort in `.codex/config.toml`.
+- Change a named role's model, effort, permissions, or instructions in its `.codex/agents/*.toml` file. Named roles pin these values, so changing generic subagent defaults does not change them.
+- Adjust delegation and review criteria in the `codex-orchestrator` skill.
+- Adjust `agents.max_concurrent_threads_per_session` to change the child-agent limit.
+
+The explorer, researcher, and reviewer use read-only permissions; the worker uses workspace-write. Execution remains subject to the parent session's permissions. Explicit UI or project overrides may change the active configuration, and existing sessions may need to be restarted to load changes.
+
+## Validation and contributions
+
+Run the configuration checks from this repository:
 
 ```sh
 python scripts/validate.py
 ```
 
-GitHub Actions runs on every push and pull request to validate TOML, models and reasoning effort, role permissions, concurrency, and the presence of instruction files. Validation makes no model requests, needs no API keys, and does not prove that models follow every orchestration rule.
+GitHub Actions runs the same checks on pushes and pull requests. They validate TOML, role models and effort, permissions, concurrency, and the presence of instruction files. They do not make model requests or verify runtime orchestration behavior.
 
-Maintain role responsibilities in `.codex/agents/` and orchestration behavior in the skill file. When intentionally changing the topology, update the configuration, expected values in `scripts/validate.py`, and both README translations together. The validator keeps explicit expectations to detect accidental model substitutions. Use feature branches and pull requests to track changes, and issues to collect observed behavior and usage data.
+Issues and pull requests are welcome. For bugs, include the relevant Codex environment, configuration, task, and observed behavior with secrets removed. When proposing a topology change, update the configuration, expected values in `scripts/validate.py`, and both README translations together. Keep unrelated changes in separate pull requests.
 
-## References
+## Acknowledgments
 
-Architecture inspired by [donvito/codex-astra-luna-orchestrator](https://github.com/donvito/codex-astra-luna-orchestrator/). The configuration and documentation were written for the requested topology: Sol/high handles implementation and tests, Luna/max handles exploration and research, Astra/medium orchestrates, and Astra/xhigh reviews only when needed. There is no fixed tester stage.
+Architecture inspired by [donvito/codex-astra-luna-orchestrator](https://github.com/donvito/codex-astra-luna-orchestrator/).
 
-Configuration reference: [OpenAI subagent documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents).
+## License
+
+[MIT](LICENSE) © 2026 da34.

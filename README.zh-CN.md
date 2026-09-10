@@ -2,55 +2,119 @@
 
 [English](README.md) | **简体中文**
 
-用于长期维护用户指定的 Codex 多代理编排。克隆本仓库不会自动安装配置，也不会修改当前 Codex 全局设置。
+为 Codex 提供按需多代理编排：**Astra 统筹，Luna 调查，Sol 实现。** 需要时，再由 Astra 进行独立审查。
 
-| 阶段 / 角色 | 模型 | 思考强度 | 工作 |
+本仓库提供代理配置、编排技能和项目指令，适合能够拆分为明确子任务的开发工作。简单任务由主代理直接完成，独立工作可以并行，最终由主代理整合并验证结果。
+
+## 工作方式
+
+```text
+                    Astra · medium
+                       主代理统筹
+                           |
+                         按需分派
+              +------------+------------+
+              |            |            |
+           explorer      worker      researcher
+          Luna · max    Sol · high    Luna · max
+           代码调查      实现与测试      资料查询
+              |            |            |
+              +------------+------------+
+                           |
+                    Astra · medium
+                       整合与验证
+                           |
+                        仅在需要时
+                           |
+                    Astra · xhigh
+                        独立审查
+```
+
+| 角色 | 模型 | 思考强度 | 职责 |
 |---|---|---|---|
-| 主代理 | GPT-6 Astra | medium | 拆解、调度、整合、验证 |
-| explorer | GPT-5.6 Luna | max | 有明确范围的代码调查 |
-| worker | GPT-5.6 Sol | high | 实现与测试 |
-| researcher | GPT-5.6 Luna | max | 聚焦的资料查询 |
-| reviewer（按需） | GPT-6 Astra | xhigh | 整合验证后的独立审查 |
+| 主代理 | `gpt-6-astra` | `medium` | 确定范围、分派、整合与验证 |
+| explorer | `gpt-5.6-luna` | `max` | 调查范围明确的代码问题 |
+| worker | `gpt-5.6-sol` | `high` | 实现修改并运行相关测试 |
+| researcher | `gpt-5.6-luna` | `max` | 回答聚焦的文档或资料问题 |
+| reviewer | `gpt-6-astra` | `xhigh` | 按需独立检查整合后的修改 |
 
-最多同时运行三个子代理，加上主代理共四个。独立审查复用已完成工作的名额。简单任务由主代理直接处理；只有独立工作值得拆分时才启动对应角色。依赖调查结果的实现会等待结果，不强行并行。
+默认最多同时运行三个子代理。审查在整合与验证后进行，复用空闲名额；依赖调查结论的工作会等待结果。按需分派旨在控制协调开销，不保证每个任务都能节省 Token。
 
-## 文件结构
+## 环境要求
 
-- `.codex/config.toml`：主代理与通用子代理默认值、并发上限。
-- `.codex/agents/*.toml`：四个具名角色的模型、强度、职责和权限。
-- `.agents/skills/codex-orchestrator/SKILL.md`：调度与验收规则。
-- `AGENTS.md`：项目入口，指向上述技能。
+- 支持子代理、自定义代理配置和技能的 Codex 环境。
+- 可使用配置中的模型及思考强度，或自行配置兼容的替代模型。
+- 使用 researcher 时，Codex 需要有可用的资料查询工具。
+- 仅在运行配置校验脚本时需要 Python 3.11 或更新版本。
 
-## 日后安装到项目
+平台配置细节见 [OpenAI 子代理文档](https://learn.chatgpt.com/docs/agent-configuration/subagents)。
 
-1. 将包中的 `.codex` 和 `.agents` 合并到目标项目根目录。目标项目已有同名文件时，先备份并合并内容。
-2. 将本包 `AGENTS.md` 的编排段落合并到项目原有 `AGENTS.md`，保留原有项目规则。
-3. 对于已有 `.codex/config.toml`，合并模型、思考强度及 `[agents]` 中的键，不要重复创建同名 TOML 表。保留原来的模型服务商、认证、MCP 和其他配置。
-4. 在已信任的目标项目中开启新的 Codex 任务。已有会话的模型和工具配置不保证热更新；项目或界面中的显式覆盖也可能改变实际模型。
-5. 可以明确调用：`$codex-orchestrator 帮我实现……，按需使用子代理。`
+## 安装
 
-此包按项目布局提供，不附带自动安装脚本。角色显式固定模型和强度，调整通用子代理默认值不会改变具名角色。研究角色还需要环境提供可用的资料查询工具。模型名称按当前会话支持的标识配置，目标环境仍须提供这些模型。
+克隆仓库：
 
-只读角色：explorer、researcher、reviewer。worker 使用 workspace-write，实际执行仍受父会话权限约束。根配置没有指定或覆盖现有审批、认证和服务商设置。
+```sh
+git clone https://github.com/da34/codex-orchestrator.git
+```
 
-## 验证范围
+将以下组件合并到目标项目：
 
-配置包已做 TOML 解析、角色映射、技能 frontmatter 和打包完整性检查。没有安装到当前 Codex，也没有启动模型请求做端到端运行测试。按需分工旨在控制开销，实际 Token 用量取决于任务与上下文。
+| 组件 | 用途 |
+|---|---|
+| `.codex/config.toml` | 主模型、通用子代理默认值与并发设置 |
+| `.codex/agents/` | 四个具名代理配置 |
+| `.agents/skills/codex-orchestrator/` | 编排技能 |
+| `AGENTS.md` | 使用技能的项目指令 |
 
-## 持续迭代
+已有项目应先备份重名文件，再合并内容。保留原有 `AGENTS.md` 规则，以及模型服务商、认证、MCP 和权限设置。存在 `[agents]` 表时，将配置键合并到该表中，避免重复定义。
 
-修改配置后，使用 Python 3.11 或更新版本执行：
+安装后，在已信任的目标项目中开启新的 Codex 任务。仅克隆仓库不会完成安装。本仓库采用项目级配置，不提供自动安装脚本。
+
+## 使用
+
+通过技能名称提交具体任务：
+
+```text
+$codex-orchestrator
+为发票页面添加 CSV 导出，遵循现有导出约定，
+并验证列顺序、转义和空结果。
+```
+
+也可以在任务中明确要求独立审查：
+
+```text
+$codex-orchestrator
+在保持行为不变的前提下重构权限检查。
+整合和验证后，请独立审查访问控制是否出现回归。
+```
+
+技能会按任务选择需要的角色。测试由 worker 承担，没有单独的 tester 阶段。除非明确要求或存在值得独立检查的剩余风险，否则可以跳过 reviewer。
+
+## 自定义
+
+- 在 `.codex/config.toml` 中调整主模型和思考强度。
+- 在对应的 `.codex/agents/*.toml` 中调整具名角色的模型、强度、权限或指令。具名角色固定了这些值，修改通用子代理默认值不会改变它们。
+- 在 `codex-orchestrator` 技能中调整分派和审查条件。
+- 通过 `agents.max_concurrent_threads_per_session` 调整子代理并发上限。
+
+explorer、researcher 和 reviewer 使用只读权限，worker 使用 workspace-write。实际执行仍受父会话权限约束。界面或项目中的显式覆盖可能改变生效配置，已有会话可能需要重新启动以加载修改。
+
+## 校验与贡献
+
+在本仓库中运行配置检查：
 
 ```sh
 python scripts/validate.py
 ```
 
-每次 push 和 pull request 都会通过 GitHub Actions 自动校验 TOML、模型与强度、角色权限、并发数量和指令文件是否存在。此校验不调用模型，不需要 API 密钥，也不证明模型实际遵循全部调度规则。
+GitHub Actions 会在 push 和 pull request 时运行相同检查，验证 TOML、角色模型与强度、权限、并发数量，以及指令文件是否存在。检查不会调用模型，也不会验证运行时的编排行为。
 
-角色职责在 `.codex/agents/` 中维护，调度行为在技能文件中维护。如果有意调整图片中的拓扑，同时更新配置、`scripts/validate.py` 的预期值和中英文 README；验证脚本保留预期值是为了检测意外的模型替换。使用功能分支和 pull request 记录修改，Issue 可用于收集实际运行中的问题与用量数据。
+欢迎提交 Issue 和 pull request。报告问题时，请提供相关 Codex 环境、配置、任务和实际表现，并移除密钥等敏感信息。调整编排结构时，请同步修改配置、`scripts/validate.py` 中的预期值和中英文 README；互不相关的修改请分别提交。
 
-## 参考
+## 致谢
 
-架构参考：[donvito/codex-astra-luna-orchestrator](https://github.com/donvito/codex-astra-luna-orchestrator/)。配置与说明为按用户图片重新编写；主要差异是 Sol/high 负责实现和测试，Luna/max 负责探索与查询，Astra/medium 统筹，Astra/xhigh 仅按需审查，没有固定 tester 阶段。
+架构灵感来自 [donvito/codex-astra-luna-orchestrator](https://github.com/donvito/codex-astra-luna-orchestrator/)。
 
-配置依据：[OpenAI 子代理文档](https://learn.chatgpt.com/docs/agent-configuration/subagents)。
+## 开源协议
+
+[MIT](LICENSE) © 2026 da34。
