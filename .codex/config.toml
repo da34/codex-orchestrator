@@ -1,0 +1,10 @@
+# Root orchestrates, integrates, and verifies at medium effort.
+model = "gpt-6-astra"
+model_reasoning_effort = "medium"
+
+[agents]
+enabled = true
+# Three children plus the root match the supplied diagram.
+max_concurrent_threads_per_session = 3
+default_subagent_model = "gpt-5.6-luna"
+default_subagent_reasoning_effort = "max"
