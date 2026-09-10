@@ -1,54 +1,56 @@
-# 按图片编排的 Codex 配置包
+# Cost-Efficient Codex Orchestrator
 
-用于长期维护用户指定的 Codex 多代理编排。克隆本仓库不会自动安装配置，也不会修改当前 Codex 全局设置。
+**English** | [简体中文](README.zh-CN.md)
 
-| 阶段 / 角色 | 模型 | 思考强度 | 工作 |
+A reusable configuration for on-demand multi-agent work in Codex. Cloning this repository does not install the configuration or change your global Codex settings.
+
+| Stage / role | Model | Reasoning effort | Responsibility |
 |---|---|---|---|
-| 主代理 | GPT-6 Astra | medium | 拆解、调度、整合、验证 |
-| explorer | GPT-5.6 Luna | max | 有明确范围的代码调查 |
-| worker | GPT-5.6 Sol | high | 实现与测试 |
-| researcher | GPT-5.6 Luna | max | 聚焦的资料查询 |
-| reviewer（按需） | GPT-6 Astra | xhigh | 整合验证后的独立审查 |
+| Root | GPT-6 Astra | medium | Decomposition, orchestration, integration, verification |
+| explorer | GPT-5.6 Luna | max | Bounded codebase investigation |
+| worker | GPT-5.6 Sol | high | Implementation and tests |
+| researcher | GPT-5.6 Luna | max | Focused documentation and source lookup |
+| reviewer (optional) | GPT-6 Astra | xhigh | Independent review after integration and verification |
 
-最多同时运行三个子代理，加上主代理共四个。独立审查复用已完成工作的名额。简单任务由主代理直接处理；只有独立工作值得拆分时才启动对应角色。依赖调查结果的实现会等待结果，不强行并行。
+Run at most three subagents concurrently, for a total of four agents including the root. Independent review reuses a slot after earlier work completes. The root handles simple tasks directly and delegates only useful independent work. Implementation that depends on investigation waits for those findings.
 
-## 文件结构
+## Repository layout
 
-- `.codex/config.toml`：主代理与通用子代理默认值、并发上限。
-- `.codex/agents/*.toml`：四个具名角色的模型、强度、职责和权限。
-- `.agents/skills/cost-efficient-orchestrator/SKILL.md`：调度与验收规则。
-- `AGENTS.md`：项目入口，指向上述技能。
+- `.codex/config.toml`: Root settings, generic subagent defaults, and concurrency limit.
+- `.codex/agents/*.toml`: Models, reasoning effort, responsibilities, and permissions for the four named roles.
+- `.agents/skills/cost-efficient-orchestrator/SKILL.md`: Delegation and acceptance rules.
+- `AGENTS.md`: Project instructions pointing to the orchestration skill.
 
-## 日后安装到项目
+## Install into a project
 
-1. 将包中的 `.codex` 和 `.agents` 合并到目标项目根目录。目标项目已有同名文件时，先备份并合并内容。
-2. 将本包 `AGENTS.md` 的编排段落合并到项目原有 `AGENTS.md`，保留原有项目规则。
-3. 对于已有 `.codex/config.toml`，合并模型、思考强度及 `[agents]` 中的键，不要重复创建同名 TOML 表。保留原来的模型服务商、认证、MCP 和其他配置。
-4. 在已信任的目标项目中开启新的 Codex 任务。已有会话的模型和工具配置不保证热更新；项目或界面中的显式覆盖也可能改变实际模型。
-5. 可以明确调用：`$cost-efficient-orchestrator 帮我实现……，按需使用子代理。`
+1. Merge `.codex` and `.agents` into your target project's root directory. Back up and merge any existing files with matching names.
+2. Merge the orchestration paragraph from this repository's `AGENTS.md` into the project's existing `AGENTS.md`, preserving its project rules.
+3. If `.codex/config.toml` already exists, merge the model, reasoning effort, and `[agents]` keys without creating duplicate TOML tables. Preserve existing provider, authentication, MCP, and other settings.
+4. Start a new Codex task in the trusted target project. Existing sessions may not reload model and tool settings; explicit project or UI overrides may also change the actual model used.
+5. Invoke the skill explicitly if desired: `$cost-efficient-orchestrator Implement ..., using subagents where useful.`
 
-此包按项目布局提供，不附带自动安装脚本。角色显式固定模型和强度，调整通用子代理默认值不会改变具名角色。研究角色还需要环境提供可用的资料查询工具。模型名称按当前会话支持的标识配置，目标环境仍须提供这些模型。
+This repository provides a project-scoped layout without an automatic installer. Named roles pin their models and reasoning effort, so changing generic subagent defaults does not change those roles. The researcher also needs lookup tools in the target environment. Model identifiers match the environment used to prepare this configuration; your environment must provide those models.
 
-只读角色：explorer、researcher、reviewer。worker 使用 workspace-write，实际执行仍受父会话权限约束。根配置没有指定或覆盖现有审批、认证和服务商设置。
+The explorer, researcher, and reviewer are read-only. The worker uses workspace-write, subject to the parent session's permissions. The root configuration does not set or override approval, authentication, or provider settings.
 
-## 验证范围
+## Validation scope
 
-配置包已做 TOML 解析、角色映射、技能 frontmatter 和打包完整性检查。没有安装到当前 Codex，也没有启动模型请求做端到端运行测试。按需分工旨在控制开销，实际 Token 用量取决于任务与上下文。
+The initial configuration package passed TOML parsing, role mapping, skill frontmatter, and archive integrity checks. It has not been installed into the active Codex configuration used to prepare it or tested through end-to-end model requests. On-demand delegation aims to control overhead; actual token usage depends on the task and context.
 
-## 持续迭代
+## Ongoing development
 
-修改配置后，使用 Python 3.11 或更新版本执行：
+After changing the configuration, run the validator with Python 3.11 or later:
 
 ```sh
 python scripts/validate.py
 ```
 
-每次 push 和 pull request 都会通过 GitHub Actions 自动校验 TOML、模型与强度、角色权限、并发数量和指令文件是否存在。此校验不调用模型，不需要 API 密钥，也不证明模型实际遵循全部调度规则。
+GitHub Actions runs on every push and pull request to validate TOML, models and reasoning effort, role permissions, concurrency, and the presence of instruction files. Validation makes no model requests, needs no API keys, and does not prove that models follow every orchestration rule.
 
-角色职责在 `.codex/agents/` 中维护，调度行为在技能文件中维护。如果有意调整图片中的拓扑，同时更新配置、`scripts/validate.py` 的预期值和此说明；验证脚本保留预期值是为了检测意外的模型替换。使用功能分支和 pull request 记录修改，Issue 可用于收集实际运行中的问题与用量数据。
+Maintain role responsibilities in `.codex/agents/` and orchestration behavior in the skill file. When intentionally changing the topology, update the configuration, expected values in `scripts/validate.py`, and both README translations together. The validator keeps explicit expectations to detect accidental model substitutions. Use feature branches and pull requests to track changes, and issues to collect observed behavior and usage data.
 
-## 参考
+## References
 
-架构参考：[donvito/codex-astra-luna-orchestrator](https://github.com/donvito/codex-astra-luna-orchestrator/)。配置与说明为按用户图片重新编写；主要差异是 Sol/high 负责实现和测试，Luna/max 负责探索与查询，Astra/medium 统筹，Astra/xhigh 仅按需审查，没有固定 tester 阶段。
+Architecture inspired by [donvito/codex-astra-luna-orchestrator](https://github.com/donvito/codex-astra-luna-orchestrator/). The configuration and documentation were written for the requested topology: Sol/high handles implementation and tests, Luna/max handles exploration and research, Astra/medium orchestrates, and Astra/xhigh reviews only when needed. There is no fixed tester stage.
 
-配置依据：[OpenAI 子代理文档](https://learn.chatgpt.com/docs/agent-configuration/subagents)。
+Configuration reference: [OpenAI subagent documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents).
