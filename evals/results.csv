@@ -1,0 +1,1 @@
+run_id,rules_version,case,repeat,root_model,root_effort,child_models_and_efforts,acceptance_pass,human_corrections,root_requests,child_requests,children,uncached_input_tokens,cached_input_tokens,output_tokens,actual_cost,currency,elapsed_seconds,coordination_messages,short_waits,duplicate_explorations,redundant_checks,evidence,notes

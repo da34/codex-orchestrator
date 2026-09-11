@@ -90,7 +90,9 @@ After integration and verification, use an independent reviewer
 to check for access-control regressions.
 ```
 
-The skill chooses which roles are useful. Tests belong to the worker; there is no separate tester stage. The reviewer is optional unless requested or warranted by material residual risk.
+Delegate when the root can advance separate work in parallel, or a bounded investigation can return concise evidence while keeping substantial exploration out of the root's context. Complexity alone does not justify delegation. During execution the root works within its own scope, uses long event-driven waits when idle, and inspects completed changes at handoff. Coordination focuses on blockers, interface changes, and completion.
+
+The worker runs checks for its changes and reports commands and results. The root reuses this evidence and covers integration boundaries and remaining acceptance criteria, repeating checks when affected by later changes, insufficient evidence, or findings. Required project checks still apply. There is no separate tester stage. The reviewer is optional unless requested or warranted by material residual risk.
 
 ## Customization
 
@@ -110,6 +112,8 @@ python scripts/validate.py
 ```
 
 GitHub Actions runs the same checks on pushes and pull requests. They validate TOML, role models and effort, permissions, concurrency, and the presence of instruction files. They do not make model requests or verify runtime orchestration behavior.
+
+To evaluate orchestration behavior and cost, use the [repeatable evaluation pack](evals/README.md) (Chinese): six self-contained cases, fresh workspace generation, independent acceptance checks, and a results template, using only the Python standard library. Run the model tasks separately; passing static checks does not demonstrate token savings.
 
 Issues and pull requests are welcome. For bugs, include the relevant Codex environment, configuration, task, and observed behavior with secrets removed. When proposing a topology change, update the configuration, expected values in `scripts/validate.py`, and both README translations together. Keep unrelated changes in separate pull requests.
 

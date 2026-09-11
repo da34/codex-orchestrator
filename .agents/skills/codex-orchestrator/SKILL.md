@@ -9,19 +9,25 @@ Use the root for task decomposition, decisions, integration, and verification. T
 
 ## Delegate useful work
 
-First identify the acceptance criteria and whether delegation would produce an independent, useful result. Complete simple questions and small self-contained edits directly. Spawn only needed roles:
+Complete simple questions and small self-contained edits directly. Delegate only when the root has useful independent work to advance in parallel, or a bounded investigation can keep substantial exploration out of the root's context and return concise evidence. Task complexity alone is insufficient. Before dispatch, identify the acceptance criteria and the work delegation saves the root. Spawn only needed roles:
 
 - `explorer` for a bounded question about existing code or behavior.
 - `worker` for implementation and relevant tests.
 - `researcher` for a focused external lookup.
 
-Parallelize independent work while the root advances a useful separate part. When implementation depends on exploration or research, wait for those findings before assigning the dependent work. Give each assignment its question or acceptance criteria, necessary context, file ownership when writing, and expected evidence. Keep at most three children running and avoid overlapping writes.
+When implementation depends on exploration or research, wait for those findings before assigning the dependent work. Give each assignment its question or acceptance criteria, necessary context, interface constraints, file ownership when writing, and expected verification evidence. Ask for coordination reports on blockers, interface changes, or completion. Keep at most three children running and avoid overlapping writes.
 
 Use native subagents rather than creating user-visible standalone tasks. When the spawn tool accepts explicit model and reasoning overrides, pass the role's values. If full-history inheritance prevents model overrides, use a bounded context fork or a fresh context with the required task evidence. Report unavailable models or tools; continue useful root work without silently claiming the requested topology ran.
 
+## Coordinate at handoffs
+
+While a child works, the root stays within its separate scope. Inspect the child's completed diff at handoff rather than repeatedly reading unfinished files or duplicating its investigation. Intervene when a dependency is blocked, an interface changes, or the child requests help.
+
+When no independent work remains, use a long event-driven wait within the tool and session limits instead of short polling or status requests. Keep required user progress updates separate from child coordination. Consolidate feedback at handoff into one actionable response where possible.
+
 ## Integrate and verify
 
-Wait for required results, inspect the changes, reconcile issues, and verify the integrated behavior against the acceptance criteria. Distinguish checks actually run from suggestions. The worker owns implementation tests; a separate tester is not part of this topology.
+Wait for required results, inspect the final changes, and reconcile issues against the acceptance criteria. The worker owns checks for its assigned changes and reports exact commands, actual results, and unverified behavior. The root reuses that evidence and adds checks for integration boundaries or uncovered acceptance criteria. Rerun covered checks only when subsequent changes affect them, evidence is insufficient, or a finding warrants it; complete required project checks. A separate tester is not part of this topology.
 
 ## Review only when needed
 
