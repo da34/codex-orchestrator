@@ -5,11 +5,12 @@ import tomllib
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED = {
-    "explorer": ("gpt-5.6-luna", "max", "read-only"),
-    "worker": ("gpt-5.6-sol", "high", "workspace-write"),
-    "researcher": ("gpt-5.6-luna", "max", "read-only"),
-    "reviewer": ("gpt-6-astra", "xhigh", "read-only"),
+ROLE_PERMISSIONS = {
+    "explorer": "read-only",
+    "worker": "workspace-write",
+    "tester": "workspace-write",
+    "researcher": "read-only",
+    "reviewer": "read-only",
 }
 
 
@@ -18,28 +19,41 @@ def require(condition, message):
         raise ValueError(message)
 
 
-def main():
-    config = tomllib.loads((ROOT / ".codex/config.toml").read_text(encoding="utf-8"))
-    require(config["model"] == "gpt-6-astra", "Root must use Astra")
-    require(config["model_reasoning_effort"] == "medium", "Root must use medium effort")
+def validate_preset(directory, root_model, root_effort, child_effort):
+    config = tomllib.loads((directory / "config.toml").read_text(encoding="utf-8"))
+    require(config["model"] == root_model, f"Root must use {root_model}: {directory}")
+    require(config["model_reasoning_effort"] == root_effort, f"Root must use {root_effort} effort")
     agents = config["agents"]
     require(agents["enabled"] is True, "Subagents must be enabled")
-    require(agents["max_concurrent_threads_per_session"] == 3, "Expected three child slots")
+    require(agents["max_concurrent_threads_per_session"] == 4, "Expected four child slots")
     require(agents["default_subagent_model"] == "gpt-5.6-luna", "Default child must use Luna")
-    require(agents["default_subagent_reasoning_effort"] == "max", "Default child must use max effort")
-    files = {path.stem: path for path in (ROOT / ".codex/agents").glob("*.toml")}
-    require(files.keys() == EXPECTED.keys(), "Expected explorer, worker, researcher, reviewer only")
-    for name, expected in EXPECTED.items():
+    require(agents["default_subagent_reasoning_effort"] == child_effort, f"Default child must use {child_effort} effort")
+    files = {path.stem: path for path in (directory / "agents").glob("*.toml")}
+    require(files.keys() == ROLE_PERMISSIONS.keys(), "Expected explorer, worker, tester, researcher, reviewer only")
+    roles = {}
+    for name, permission in ROLE_PERMISSIONS.items():
         role = tomllib.loads(files[name].read_text(encoding="utf-8"))
         require(role["name"] == name, f"Role name mismatch: {name}")
+        model, effort = ("gpt-6-astra", "low") if name == "reviewer" else ("gpt-5.6-luna", child_effort)
+        expected = (model, effort, permission)
         actual = tuple(role[key] for key in ("model", "model_reasoning_effort", "sandbox_mode"))
         require(actual == expected, f"Topology mismatch for {name}: {actual}")
         for key in ("description", "developer_instructions"):
             require(isinstance(role[key], str) and role[key].strip(), f"Missing {name}.{key}")
+        roles[name] = role
+    return roles
+
+
+def main():
+    pro = validate_preset(ROOT / ".codex", "gpt-6-astra", "medium", "max")
+    plus = validate_preset(ROOT / "presets/plus/.codex", "gpt-5.6-luna", "max", "medium")
+    for name in ROLE_PERMISSIONS:
+        for key in ("description", "developer_instructions"):
+            require(pro[name][key] == plus[name][key], f"Preset instructions differ: {name}.{key}")
     skill = ROOT / ".agents/skills/codex-orchestrator/SKILL.md"
     require(skill.is_file(), "Missing orchestration skill")
     require((ROOT / "AGENTS.md").is_file(), "Missing project instruction entrypoint")
-    print("PASS: TOML, role models, effort, permissions, concurrency, and instruction files")
+    print("PASS: Plus and Pro TOML, role models, effort, permissions, concurrency, and shared instructions")
 
 
 if __name__ == "__main__":

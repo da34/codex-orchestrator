@@ -1,10 +1,10 @@
-# Pro preset: root orchestrates, integrates, and verifies at medium effort.
-model = "gpt-6-astra"
-model_reasoning_effort = "medium"
+# Plus preset: root orchestrates, integrates, and verifies at max effort.
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
 
 [agents]
 enabled = true
 # Four concurrent subagents, excluding the root; runtime limits still apply.
 max_concurrent_threads_per_session = 4
 default_subagent_model = "gpt-5.6-luna"
-default_subagent_reasoning_effort = "max"
+default_subagent_reasoning_effort = "medium"

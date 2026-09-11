@@ -1,6 +1,6 @@
 ---
 name: codex-orchestrator
-description: Coordinate coding and investigation work with the user's Astra, Sol, and Luna agent topology. Use for tasks with bounded implementation, code exploration, documentation research, or a requested independent review; handle simple work directly.
+description: Coordinate coding and investigation work with the installed Plus or Pro agent topology. Use for tasks with bounded implementation, code exploration, independent testing, documentation research, or a requested independent review; handle simple work directly.
 ---
 
 # On-demand orchestration
@@ -13,9 +13,10 @@ Complete simple questions and small self-contained edits directly. Delegate only
 
 - `explorer` for a bounded question about existing code or behavior.
 - `worker` for implementation and relevant tests.
+- `tester` for bounded independent acceptance or regression testing when needed.
 - `researcher` for a focused external lookup.
 
-When implementation depends on exploration or research, wait for those findings before assigning the dependent work. Give each assignment its question or acceptance criteria, necessary context, interface constraints, file ownership when writing, and expected verification evidence. Ask for coordination reports on blockers, interface changes, or completion. Keep at most three children running and avoid overlapping writes.
+When implementation depends on exploration or research, wait for those findings before assigning the dependent work. Give each assignment its question or acceptance criteria, necessary context, interface constraints, file ownership when writing, and expected verification evidence. Ask for coordination reports on blockers, interface changes, or completion. Respect the installed child concurrency limit and any lower runtime limit; the configured limit excludes the root. Avoid overlapping writes.
 
 Use native subagents rather than creating user-visible standalone tasks. When the spawn tool accepts explicit model and reasoning overrides, pass the role's values. If full-history inheritance prevents model overrides, use a bounded context fork or a fresh context with the required task evidence. Report unavailable models or tools; continue useful root work without silently claiming the requested topology ran.
 
@@ -27,7 +28,7 @@ When no independent work remains, use a long event-driven wait within the tool a
 
 ## Integrate and verify
 
-Wait for required results, inspect the final changes, and reconcile issues against the acceptance criteria. The worker owns checks for its assigned changes and reports exact commands, actual results, and unverified behavior. The root reuses that evidence and adds checks for integration boundaries or uncovered acceptance criteria. Rerun covered checks only when subsequent changes affect them, evidence is insufficient, or a finding warrants it; complete required project checks. A separate tester is not part of this topology.
+Wait for required results, inspect the final changes, and reconcile issues against the acceptance criteria. The worker owns checks for its assigned changes and reports exact commands, actual results, and unverified behavior. The root reuses that evidence and adds checks for integration boundaries or uncovered acceptance criteria. Delegate to the tester when independent verification is useful, with clear test ownership and prerequisites; testing is not a mandatory separate stage. Rerun covered checks only when subsequent changes affect them, evidence is insufficient, or a finding warrants it; complete required project checks.
 
 ## Review only when needed
 
