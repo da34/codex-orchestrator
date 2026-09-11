@@ -473,6 +473,13 @@ def _parser() -> argparse.ArgumentParser:
     check_parser = subparsers.add_parser("check", help="check a prepared workspace")
     check_parser.add_argument("case", choices=[*CASES, "all"])
     check_parser.add_argument("--workspace", required=True, type=Path)
+
+    bench_parser = subparsers.add_parser("bench", help="run cases in fresh Codex CLI sessions")
+    bench_parser.add_argument("--case", choices=[*CASES, "all"], default="all")
+    bench_parser.add_argument("--output", type=Path)
+    bench_parser.add_argument("--rules", type=Path)
+    bench_parser.add_argument("--timeout", type=int, default=900)
+    bench_parser.add_argument("--codex", help="path or command name for the Codex CLI")
     return parser
 
 
@@ -491,6 +498,19 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "prepare":
             rules_root = args.rules or Path(__file__).resolve().parents[1]
             payload = prepare(args.case, args.output, rules_root.resolve())
+        elif args.command == "bench":
+            from bench import bench
+
+            repository_root = Path(__file__).resolve().parents[1]
+            rules_root = (args.rules or repository_root).resolve()
+            payload = bench(
+                args.case,
+                args.output,
+                rules_root,
+                args.timeout,
+                args.codex,
+                repository_root,
+            )
         elif args.case == "all":
             results = [check(name, args.workspace / name) for name in CASES]
             errors = [f"{result['case']}: {error}" for result in results for error in result["errors"]]
@@ -500,6 +520,8 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError) as error:
         payload = {"pass": False, "errors": [str(error)]}
     _json_output(payload)
+    if payload.get("interrupted"):
+        return 130
     return 0 if payload["pass"] else 1
 
 

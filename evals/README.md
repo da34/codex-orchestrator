@@ -1,8 +1,40 @@
 # 可重复的编排评估
 
-本测试包只依赖 Python 3.11+ 和本仓库。固定任务、起始代码和验收器都随仓库保存，不需要其他项目、历史对话、账号、网络接口或第三方 Python 包。实际执行任务仍需要可用的 Codex 模型和子代理；准备与验收脚本离线运行，不会发起模型请求。
+案例生成和验收只依赖 Python 3.11+ 和本仓库，不需要其他项目、历史对话或第三方 Python 包。一键运行还需要已登录、可用的 Codex CLI；它会实际调用模型并消耗额度。
 
-## 每次怎么跑
+## 一键运行（推荐）
+
+在已信任的本仓库根目录运行：
+
+```powershell
+python evals/run.py bench
+```
+
+脚本自动生成六个全新案例，为每个案例启动独立的 `codex exec` 会话，依次完成任务和验收。无需手动开六个任务。结果默认保存在 `work/evals/` 下本轮新目录中，终端会显示结果路径；每次执行都会生成新目录。
+
+Windows 支持原生 `codex.exe` 和 npm 安装的 `codex.cmd`／`codex.ps1`。npm 安装会通过 Node.js 启动同目录下的 Codex 包；无需另行安装原生版本。
+
+查看该目录下的 `summary.md`，即可看到各案例是否通过、耗时和 CLI 报告的 token。`results.json` 保存结构化结果，日志保存原始事件、错误和最终回答。每完成一个案例就更新结果，失败会记录原因并继续后续案例，不自动重试或切换模型。默认每例最多运行 900 秒，Ctrl+C 可中断并保留已产生的结果。
+
+只想先试一个案例：
+
+```powershell
+python evals/run.py bench --case slug
+```
+
+使用另一份规则快照进行下一轮：
+
+```powershell
+python evals/run.py bench --rules D:/temp/rules-A
+```
+
+规则来源可以在其他目录；`bench --output` 必须位于本仓库内，使生成的项目配置在已信任仓库中加载。CLI 与桌面任务的显式模型覆盖可能不同，比较时以记录的 CLI 版本、命令和规则快照为准。脚本不修改全局登录或信任配置。
+
+Token 来自 `codex exec --json` 的 `turn.completed.usage`。缺失值保留为空；该事件未保证包含所有子代理消耗，因此报告不能直接当作完整账单，也不自动推算费用、模型请求次数或重复探索次数。[官方非交互模式说明](https://learn.chatgpt.com/docs/non-interactive-mode)
+
+若案例失败，先打开报告里的最终回答和 CLI 日志，区分实现错误与运行环境故障。例如 `CryptUnprotectData failed` 表示本机 Windows 沙箱未能正常启动工具；这种运行不适合拿来判断编排效率。脚本保持 `workspace-write` 权限，不会自动关闭沙箱或修改系统设置。[Windows 沙箱排障](https://learn.chatgpt.com/docs/windows/windows-sandbox)
+
+## 手动运行（可选）
 
 在仓库根目录运行：
 
@@ -69,7 +101,7 @@ python evals/run.py prepare all --output D:/temp/orchestrator-eval/B-001 --rules
 
 复制 `results.csv`，每次案例运行填一行。空白表示未采集，不等于零。token 必须包含主代理和所有子代理；缓存输入是输入的子集，不能再与总输入相加。表中使用非缓存输入、缓存输入、输出三项。多模型费用按各模型实际计费规则分别计算后汇总；不知道价格就留空，不能把累计 token 当作费用。
 
-这些数据需要从本次任务及子代理的使用记录采集，本测试包不读取历史会话、不自动猜测日志格式。没有 token 数据时，仍可完成质量和协调行为评估；不能据此宣称费用下降。
+完整成本和协调指标需要从本次任务及子代理的使用记录采集。一键报告已记录验收、耗时和 CLI 提供的 usage；不读取历史会话，也不将不完整的 usage 当作总费用。没有完整 token 数据时，仍可完成质量和协调行为评估；不能据此宣称费用下降。
 
 | 指标 | 口径 |
 |---|---|
@@ -95,7 +127,7 @@ python evals/run.py prepare all --output D:/temp/orchestrator-eval/B-001 --rules
 ## 测试评估工具本身
 
 ```powershell
-python -m unittest discover -s evals -p test_run.py
+python -m unittest discover -s evals -p "test_*.py"
 python scripts/validate.py
 ```
 

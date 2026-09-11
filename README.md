@@ -113,7 +113,7 @@ python scripts/validate.py
 
 GitHub Actions runs the same checks on pushes and pull requests. They validate TOML, role models and effort, permissions, concurrency, and the presence of instruction files. They do not make model requests or verify runtime orchestration behavior.
 
-To evaluate orchestration behavior and cost, use the [repeatable evaluation pack](evals/README.md) (Chinese): six self-contained cases, fresh workspace generation, independent acceptance checks, and a results template, using only the Python standard library. Run the model tasks separately; passing static checks does not demonstrate token savings.
+To evaluate orchestration behavior, run `python evals/run.py bench` in this trusted repository with an authenticated Codex CLI. The [repeatable evaluation pack](evals/README.md) (Chinese) runs six fresh cases independently, checks their results, and writes a report. Preparation and acceptance checks use only the Python standard library. CLI-reported usage may not include all subagents; passing static checks does not demonstrate token savings.
 
 Issues and pull requests are welcome. For bugs, include the relevant Codex environment, configuration, task, and observed behavior with secrets removed. When proposing a topology change, update the configuration, expected values in `scripts/validate.py`, and both README translations together. Keep unrelated changes in separate pull requests.
 
