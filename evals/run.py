@@ -474,12 +474,14 @@ def _parser() -> argparse.ArgumentParser:
     check_parser.add_argument("case", choices=[*CASES, "all"])
     check_parser.add_argument("--workspace", required=True, type=Path)
 
-    bench_parser = subparsers.add_parser("bench", help="run cases in fresh Codex CLI sessions")
+    bench_parser = subparsers.add_parser("bench", help="run the dataset with Harbor and Docker")
     bench_parser.add_argument("--case", choices=[*CASES, "all"], default="all")
     bench_parser.add_argument("--output", type=Path)
     bench_parser.add_argument("--rules", type=Path)
     bench_parser.add_argument("--timeout", type=int, default=900)
-    bench_parser.add_argument("--codex", help="path or command name for the Codex CLI")
+    bench_parser.add_argument("--self-test", action="store_true", help="run oracle and nop without calling models")
+    bench_parser.add_argument("--attempts", type=int, default=1, help="Harbor repetitions per case")
+    bench_parser.add_argument("--model", help="override the root model for this run")
     return parser
 
 
@@ -508,8 +510,10 @@ def main(argv: list[str] | None = None) -> int:
                 args.output,
                 rules_root,
                 args.timeout,
-                args.codex,
                 repository_root,
+                self_test=args.self_test,
+                attempts=args.attempts,
+                model=args.model,
             )
         elif args.case == "all":
             results = [check(name, args.workspace / name) for name in CASES]
@@ -517,7 +521,7 @@ def main(argv: list[str] | None = None) -> int:
             payload = {"pass": not errors, "case": "all", "results": results, "errors": errors}
         else:
             payload = check(args.case, args.workspace)
-    except (OSError, ValueError) as error:
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
         payload = {"pass": False, "errors": [str(error)]}
     _json_output(payload)
     if payload.get("interrupted"):

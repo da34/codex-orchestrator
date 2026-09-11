@@ -1,38 +1,56 @@
 # 可重复的编排评估
 
-案例生成和验收只依赖 Python 3.11+ 和本仓库，不需要其他项目、历史对话或第三方 Python 包。一键运行还需要已登录、可用的 Codex CLI；它会实际调用模型并消耗额度。
+六个独立案例由 **Harbor 0.22.0 + Docker Linux 容器**运行，使用内置 Codex adapter（CLI 固定为 0.149.1）。每次生成新任务快照和容器，不依赖其他项目或上一次运行。六个小案例用于回归检查，不能单独证明复杂编排的成本收益。
 
-## 一键运行（推荐）
+## 一键运行
 
-在已信任的本仓库根目录运行：
+首次需要 Python 3.11+、[uv](https://docs.astral.sh/uv/getting-started/installation/) 和已启动 Linux 引擎的 Docker Desktop。Harbor 由 uv 自动安装固定版本；首次构建镜像需要网络和时间。模型认证沿用本机 Codex 的 auth.json 或 OPENAI_API_KEY，以及当前选中的 provider 配置。
 
 ```powershell
 python evals/run.py bench
 ```
 
-脚本自动生成六个全新案例，为每个案例启动独立的 `codex exec` 会话，依次完成任务和验收。无需手动开六个任务。结果默认保存在 `work/evals/` 下本轮新目录中，终端会显示结果路径；每次执行都会生成新目录。
+自动跑完六项，终端给出 `work/evals/<本轮>/summary.md`。底层使用 [Harbor 本地数据集入口](https://www.harborframework.com/docs/getting-started)，不再维护自制 Codex 进程执行器。旧 `--codex`、`--windows-sandbox`、`--powershell` 参数已移除。
 
-Windows 支持原生 `codex.exe` 和 npm 安装的 `codex.cmd`／`codex.ps1`。npm 安装会通过 Node.js 启动同目录下的 Codex 包；无需另行安装原生版本。
+- `summary.md`：通过率、逐项结果、整轮和各阶段耗时、输入/缓存/输出 Token、缓存占比、工具与委派调用次数、框架估算费用。缺失指标显示为“—”。
+- `jobs/codex/result.json`：Harbor 汇总。
+- `jobs/codex/<trial>/result.json`：环境异常、执行时间、模型 usage。
+- `jobs/codex/<trial>/agent/`：执行日志和轨迹。
+- `tasks/`：本轮任务、规则快照、外置验收器和参考解。
 
-查看该目录下的 `summary.md`，即可看到各案例是否通过、耗时和 CLI 报告的 token。`results.json` 保存结构化结果，日志保存原始事件、错误和最终回答。每完成一个案例就更新结果，失败会记录原因并继续后续案例，不自动重试或切换模型。默认每例最多运行 900 秒，Ctrl+C 可中断并保留已产生的结果。
+默认每例执行上限 900 秒、顺序运行、不重试；失败运行也保留。Docker 未启动时在调用模型前退出。Harbor 中 reward=1 表示通过，reward=0 表示未通过；环境异常不能当成正常评分。
 
-只想先试一个案例：
+框架在独立容器内运行代理，隔离边界是 Docker；内置 Codex adapter 使用容器内不再嵌套沙箱的执行方式。不会关闭宿主机 Windows 沙箱或修改全局 Codex 配置，也不把宿主机项目整体或 Docker socket 挂载给被测代理；Harbor 仅挂载本轮日志目录。
+
+仅把选中的模型连接和项目规则传给容器，不复制宿主机 MCP 配置。含凭据的原生配置使用临时文件，结束后删除，结果中只记录临时路径；重新运行会重新读取本机认证。结果仍可能包含任务内容，应按本地工作日志保管。
+
+## 更新已有运行的报告
+
+无需重新运行模型，直接从保存的 Harbor 日志重新生成详细摘要：
+
+```powershell
+python evals/report.py work/evals/20260911-114651-917167
+```
+
+只更新指定运行目录的 `summary.md`，保留原始 JSON 和轨迹。工具次数取各 trial 的 ATIF 轨迹，不等于模型请求次数；`spawn_agent` 调用次数也不保证是成功创建的子代理数。若委派次数为 0，本轮结果不能用于证明多代理协作收益。
+
+## 不调用模型的自检
+
+```powershell
+python evals/run.py bench --self-test
+```
+
+Harbor 分别运行 `oracle` 和 `nop`：要求六个标准答案全部 reward=1，六个空操作全部 reward=0，且没有环境异常。这个命令通过说明任务和验收器接通，不代表 Codex 有效。验收器及答案不进入代理镜像构建目录，分别在验证和 oracle 阶段才注入。
+
+## 单项与重复测评
 
 ```powershell
 python evals/run.py bench --case slug
+python evals/run.py bench --attempts 3
+python evals/run.py bench --rules D:/temp/rules-A --attempts 3
 ```
 
-使用另一份规则快照进行下一轮：
-
-```powershell
-python evals/run.py bench --rules D:/temp/rules-A
-```
-
-规则来源可以在其他目录；`bench --output` 必须位于本仓库内，使生成的项目配置在已信任仓库中加载。CLI 与桌面任务的显式模型覆盖可能不同，比较时以记录的 CLI 版本、命令和规则快照为准。脚本不修改全局登录或信任配置。
-
-Token 来自 `codex exec --json` 的 `turn.completed.usage`。缺失值保留为空；该事件未保证包含所有子代理消耗，因此报告不能直接当作完整账单，也不自动推算费用、模型请求次数或重复探索次数。[官方非交互模式说明](https://learn.chatgpt.com/docs/non-interactive-mode)
-
-若案例失败，先打开报告里的最终回答和 CLI 日志，区分实现错误与运行环境故障。例如 `CryptUnprotectData failed` 表示本机 Windows 沙箱未能正常启动工具；这种运行不适合拿来判断编排效率。脚本保持 `workspace-write` 权限，不会自动关闭沙箱或修改系统设置。[Windows 沙箱排障](https://learn.chatgpt.com/docs/windows/windows-sandbox)
+`--model` 可显式覆盖根模型；默认取规则快照的 `.codex/config.toml`。子代理配置保持快照中的设置。A/B 应使用相同案例、模型、CLI 和认证环境，只改变规则；同时比较通过率、耗时和完整成本。Harbor 的 token 汇总不保证覆盖全部 Codex 子代理，缺失值不是零；`cost_usd` 是框架估算，不等于自定义供应商的实际账单，不能直接据此宣称省钱。内置 adapter 的结果可能将 provider 标为 `openai`，该标签不能用于判断实际连接地址；实际连接仍来自本轮继承的 Codex provider 配置。
 
 ## 手动运行（可选）
 

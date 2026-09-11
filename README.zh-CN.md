@@ -111,7 +111,7 @@ python scripts/validate.py
 
 GitHub Actions 会在 push 和 pull request 时运行相同检查，验证 TOML、角色模型与强度、权限、并发数量，以及指令文件是否存在。检查不会调用模型，也不会验证运行时的编排行为。
 
-评估实际编排行为，请使用 [可重复评估包](evals/README.md)。在已信任的仓库中运行 `python evals/run.py bench`，即可自动执行六个独立案例、验收并生成报告，需要已登录的 Codex CLI。案例生成和验收仅依赖 Python 标准库；报告中的 CLI usage 不保证包含全部子代理消耗，静态校验通过也不代表 Token 已减少。
+评估实际编排行为，运行 `python evals/run.py bench`，由固定版本 Harbor 在 Docker 中执行六个独立案例。需要 Python 3.11+、uv、Docker Linux 引擎和 Codex 认证；加 `--self-test` 可不调用模型验证标准答案与空操作基线。详见 [可重复评估包](evals/README.md)。usage 不保证包含全部子代理消耗，通过验收也不代表 Token 已减少。
 
 欢迎提交 Issue 和 pull request。报告问题时，请提供相关 Codex 环境、配置、任务和实际表现，并移除密钥等敏感信息。调整编排结构时，请同步修改配置、`scripts/validate.py` 中的预期值和中英文 README；互不相关的修改请分别提交。
 
